@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AlumniTrack — Alumni Information System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- =================== AUTH =================== -->
+<div id="auth-screen">
+  <div class="auth-wrapper">
+    <div class="auth-hero">
+      <div class="hero-content">
+        <div class="hero-logo">
+          <div class="logo-mark"><i class="bi bi-mortarboard-fill"></i></div>
+          <span class="logo-wordmark">Alumni<strong>Track</strong></span>
+        </div>
+        <h1 class="hero-headline">Connecting Graduates.<br/>Building Futures.</h1>
+        <p class="hero-sub">The complete alumni management system for tracking careers, organizing events, and celebrating success.</p>
+        <div class="hero-stats">
+          <div class="hs-item"><div class="hs-num">2,400+</div><div class="hs-lbl">Alumni</div></div>
+          <div class="hs-sep"></div>
+          <div class="hs-item"><div class="hs-num">78%</div><div class="hs-lbl">Employed</div></div>
+          <div class="hs-sep"></div>
+          <div class="hs-item"><div class="hs-num">42</div><div class="hs-lbl">Events/yr</div></div>
+        </div>
+      </div>
+      <div class="hero-deco d1"></div>
+      <div class="hero-deco d2"></div>
+      <div class="hero-deco d3"></div>
+    </div>
+
+    <div class="auth-panel">
+      <div id="login-card" class="auth-card">
+        <div class="ac-head"><h2>Welcome back</h2><p>Sign in to continue</p></div>
+        <div class="field-grp"><label>Email address</label><div class="inp-wrap"><i class="bi bi-envelope-fill"></i><input type="email" id="l-em" placeholder="you@school.edu.ph"/></div></div>
+        <div class="field-grp"><label>Password</label><div class="inp-wrap"><i class="bi bi-lock-fill"></i><input type="password" id="l-pw" placeholder="••••••••"/></div></div>
+        <div class="field-grp"><label>Sign in as</label><div class="inp-wrap"><i class="bi bi-person-badge-fill"></i><select id="l-role"><option value="admin">Administrator</option><option value="alumni">Alumni</option></select></div></div>
+        <button class="btn-auth" onclick="doLogin()">Sign In <i class="bi bi-arrow-right-short"></i></button>
+        <p class="auth-sw">No account? <a href="#" onclick="toggleAuth('reg')">Register here</a></p>
+        <div class="demo-hint"><i class="bi bi-info-circle-fill"></i> Demo mode: enter any email &amp; password</div>
+      </div>
+
+      <div id="reg-card" class="auth-card d-none">
+        <div class="ac-head"><h2>Create account</h2><p>Join the alumni network</p></div>
+        <div class="row g-2"><div class="col-6"><div class="field-grp"><label>First Name</label><div class="inp-wrap"><i class="bi bi-person-fill"></i><input type="text" id="r-fn" placeholder="Maria"/></div></div></div><div class="col-6"><div class="field-grp"><label>Last Name</label><div class="inp-wrap"><i class="bi bi-person-fill"></i><input type="text" id="r-ln" placeholder="Santos"/></div></div></div></div>
+        <div class="field-grp"><label>Email</label><div class="inp-wrap"><i class="bi bi-envelope-fill"></i><input type="email" id="r-em" placeholder="you@email.com"/></div></div>
+        <div class="field-grp"><label>Password</label><div class="inp-wrap"><i class="bi bi-lock-fill"></i><input type="password" id="r-pw" placeholder="••••••••"/></div></div>
+        <div class="row g-2"><div class="col-6"><div class="field-grp"><label>Batch Year</label><div class="inp-wrap"><i class="bi bi-calendar3"></i><select id="r-bt"><option value="">Select</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option></select></div></div></div><div class="col-6"><div class="field-grp"><label>Course</label><div class="inp-wrap"><i class="bi bi-book-fill"></i><select id="r-cs"><option value="">Select</option><option>BSIT</option><option>BSCS</option><option>BSN</option><option>BSBA</option><option>BSEd</option><option>BSCE</option></select></div></div></div></div>
+        <div class="field-grp"><label>Register as</label><div class="inp-wrap"><i class="bi bi-person-badge-fill"></i><select id="r-rl"><option value="alumni">Alumni</option><option value="admin">Administrator</option></select></div></div>
+        <button class="btn-auth" onclick="doRegister()">Create Account <i class="bi bi-arrow-right-short"></i></button>
+        <p class="auth-sw">Have an account? <a href="#" onclick="toggleAuth('login')">Sign in</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== APP =================== -->
+<div id="app" class="d-none">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sb-top">
+      <div class="sb-brand">
+        <div class="sb-icon"><i class="bi bi-mortarboard-fill"></i></div>
+        <div class="sb-name">Alumni<strong>Track</strong></div>
+      </div>
+    </div>
+
+    <div class="sb-body">
+      <div class="sb-sec-lbl">Main</div>
+      <a class="sb-item" data-pg="dashboard" onclick="go('dashboard')"><i class="bi bi-grid-fill"></i><span>Dashboard</span></a>
+      <a class="sb-item" data-pg="alumni" onclick="go('alumni')"><i class="bi bi-people-fill"></i><span>Alumni</span></a>
+      <a class="sb-item" data-pg="career" onclick="go('career')"><i class="bi bi-briefcase-fill"></i><span>Career</span></a>
+      <a class="sb-item" data-pg="events" onclick="go('events')"><i class="bi bi-calendar-event-fill"></i><span>Events</span></a>
+
+      <div class="sb-sec-lbl admin-only mt-2">Management</div>
+      <a class="sb-item admin-only" data-pg="donations" onclick="go('donations')"><i class="bi bi-heart-fill"></i><span>Donations</span></a>
+      <a class="sb-item admin-only" data-pg="reports" onclick="go('reports')"><i class="bi bi-bar-chart-fill"></i><span>Reports</span></a>
+
+      <div class="sb-sec-lbl mt-2">Account</div>
+      <a class="sb-item" data-pg="profile" onclick="go('profile')"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
+    </div>
+
+    <div class="sb-foot">
+      <div class="sb-user-row">
+        <div class="sb-av" id="sb-av">A</div>
+        <div class="sb-ui">
+          <div class="sb-uname" id="sb-uname">User</div>
+          <div class="sb-urole" id="sb-urole">Admin</div>
+        </div>
+        <button class="sb-logout-btn" onclick="doLogout()" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="tb-left">
+        <button class="sb-toggle-btn" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <div class="tb-bc" id="tb-bc">Dashboard</div>
+      </div>
+      <div class="tb-right">
+        <div class="tb-date" id="tb-date"></div>
+      </div>
+    </div>
+
+    <!-- PAGE CONTAINER -->
+    <div class="page-cont">
+
+      <!-- ===== DASHBOARD ===== -->
+      <div class="page" id="pg-dashboard">
+        <div class="ph">
+          <div><h1 class="pt" id="dash-greet">Good morning</h1><p class="ps">Here's what's happening in your alumni network</p></div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kc kc-red"><div class="kc-icon"><i class="bi bi-people-fill"></i></div><div class="kc-body"><div class="kc-val" id="kpi-total">0</div><div class="kc-lbl">Total Alumni</div></div><div class="kc-bg-num">👥</div></div>
+          <div class="kc kc-dark"><div class="kc-icon"><i class="bi bi-briefcase-fill"></i></div><div class="kc-body"><div class="kc-val" id="kpi-emp">0%</div><div class="kc-lbl">Employment Rate</div></div><div class="kc-bg-num">💼</div></div>
+          <div class="kc kc-white"><div class="kc-icon kc-icon-red"><i class="bi bi-calendar-check-fill"></i></div><div class="kc-body"><div class="kc-val kc-val-dark" id="kpi-events">0</div><div class="kc-lbl kc-lbl-dark">Upcoming Events</div></div></div>
+          <div class="kc kc-white"><div class="kc-icon kc-icon-red"><i class="bi bi-heart-fill"></i></div><div class="kc-body"><div class="kc-val kc-val-dark" id="kpi-don">₱0</div><div class="kc-lbl kc-lbl-dark">Total Donations</div></div></div>
+        </div>
+
+        <div class="two-col-row">
+          <div class="panel flex-col">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-pie-chart-fill"></i> Employment Overview</span>
+              <select class="ms" id="emp-filter" onchange="redrawEmpChart(this.value)"><option value="all">All Batches</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option></select>
+            </div>
+            <div class="chart-wrap"><canvas id="emp-chart"></canvas></div>
+          </div>
+          <div class="panel flex-col">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-activity"></i> Recent Activity</span></div>
+            <div class="act-feed" id="act-feed"></div>
+          </div>
+        </div>
+
+        <div class="panel mt-4">
+          <div class="panel-hd"><span class="ptitle"><i class="bi bi-calendar2-event-fill"></i> Upcoming Events</span><button class="mini-btn" onclick="go('events')">View All →</button></div>
+          <div class="uev-row" id="dash-uev"></div>
+        </div>
+      </div>
+
+      <!-- ===== ALUMNI ===== -->
+      <div class="page d-none" id="pg-alumni">
+        <div class="ph">
+          <div><h1 class="pt">Alumni Directory</h1><p class="ps">Search, filter, and manage all alumni records</p></div>
+          <button class="btn-red admin-only" onclick="openM('addAlumni')"><i class="bi bi-plus-lg"></i> Add Alumni</button>
+        </div>
+        <div class="search-block">
+          <div class="sf-wrap"><i class="bi bi-search"></i><input type="text" id="sq" placeholder="Search by name, batch, or course..." oninput="filterDir()"/></div>
+          <div class="fc-row">
+            <select class="fc" id="sb" onchange="filterDir()"><option value="">All Batches</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option></select>
+            <select class="fc" id="sc" onchange="filterDir()"><option value="">All Courses</option><option>BSIT</option><option>BSCS</option><option>BSN</option><option>BSBA</option><option>BSEd</option><option>BSCE</option></select>
+            <select class="fc" id="ss" onchange="filterDir()"><option value="">All Status</option><option>Employed</option><option>Unemployed</option><option>Studying</option></select>
+            <select class="fc" id="si" onchange="filterDir()"><option value="">All Industries</option><option>Technology</option><option>Healthcare</option><option>Education</option><option>Finance</option><option>Government</option><option>BPO</option></select>
+          </div>
+        </div>
+        <div class="res-meta" id="dir-meta"></div>
+        <div class="ag" id="alumni-grid"></div>
+      </div>
+
+      <!-- ===== CAREER ===== -->
+      <div class="page d-none" id="pg-career">
+        <div class="ph">
+          <div><h1 class="pt">Career Tracking</h1><p class="ps">Monitor employment status and career progression</p></div>
+          <button class="btn-red alumni-only" onclick="openM('careerUpdate')"><i class="bi bi-pencil-fill"></i> Update My Career</button>
+        </div>
+        <div class="ck-row">
+          <div class="ck ck-g"><i class="bi bi-check-circle-fill"></i><div class="ck-val" id="ck-emp">0</div><div class="ck-lbl">Employed</div></div>
+          <div class="ck ck-r"><i class="bi bi-x-circle-fill"></i><div class="ck-val" id="ck-unemp">0</div><div class="ck-lbl">Unemployed</div></div>
+          <div class="ck ck-b"><i class="bi bi-book-fill"></i><div class="ck-val" id="ck-study">0</div><div class="ck-lbl">Studying</div></div>
+        </div>
+        <div class="two-col-row mt-3">
+          <div class="panel">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-building"></i> Top Industries</span></div>
+            <div id="ind-bars"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-list-ul"></i> Career Records</span></div>
+            <div class="car-list" id="car-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== EVENTS ===== -->
+      <div class="page d-none" id="pg-events">
+        <div class="ph">
+          <div><h1 class="pt">Events</h1><p class="ps">Manage and participate in alumni events</p></div>
+          <button class="btn-red admin-only" onclick="openM('createEvent')"><i class="bi bi-plus-lg"></i> Create Event</button>
+        </div>
+        <div class="events-layout">
+          <div class="panel cal-panel">
+            <div class="panel-hd">
+              <span class="ptitle"><i class="bi bi-calendar3"></i> <span id="cal-lbl"></span></span>
+              <div class="cal-nav-btns"><button onclick="calShift(-1)"><i class="bi bi-chevron-left"></i></button><button onclick="calShift(1)"><i class="bi bi-chevron-right"></i></button></div>
+            </div>
+            <div class="cal-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+            <div class="cal-grid" id="cal-grid"></div>
+          </div>
+          <div class="events-col" id="ev-cards"></div>
+        </div>
+      </div>
+
+      <!-- ===== DONATIONS ===== -->
+      <div class="page d-none" id="pg-donations">
+        <div class="ph">
+          <div><h1 class="pt">Donations</h1><p class="ps">Track alumni contributions and generosity</p></div>
+          <button class="btn-red" onclick="openM('addDonation')"><i class="bi bi-plus-lg"></i> Record Donation</button>
+        </div>
+        <div class="don-kpi-row">
+          <div class="dk"><div class="dk-lbl">Total Raised</div><div class="dk-val" id="dk-total">₱0</div></div>
+          <div class="dk"><div class="dk-lbl">This Year</div><div class="dk-val" id="dk-year">₱0</div></div>
+          <div class="dk"><div class="dk-lbl">Unique Donors</div><div class="dk-val" id="dk-donors">0</div></div>
+          <div class="dk"><div class="dk-lbl">Avg. Donation</div><div class="dk-val" id="dk-avg">₱0</div></div>
+        </div>
+        <div class="panel mt-3">
+          <div class="panel-hd"><span class="ptitle"><i class="bi bi-clock-history"></i> Donation History</span></div>
+          <div class="tw"><table class="at-tbl"><thead><tr><th>Donor</th><th>Amount</th><th>Purpose</th><th>Date</th><th>Status</th></tr></thead><tbody id="don-tb"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ===== REPORTS ===== -->
+      <div class="page d-none" id="pg-reports">
+        <div class="ph">
+          <div><h1 class="pt">Reports & Analytics</h1><p class="ps">Data insights supporting decision-making and accreditation</p></div>
+          <button class="btn-red" onclick="exportTxt()"><i class="bi bi-download"></i> Export</button>
+        </div>
+
+        <!-- REPORT KPIS -->
+        <div class="rpt-kpi-row">
+          <div class="rpk"><div class="rpk-icon bg-red"><i class="bi bi-people-fill"></i></div><div class="rpk-body"><div class="rpk-val" id="rk-total">0</div><div class="rpk-lbl">Total Alumni</div></div></div>
+          <div class="rpk"><div class="rpk-icon bg-dark"><i class="bi bi-briefcase-fill"></i></div><div class="rpk-body"><div class="rpk-val" id="rk-rate">0%</div><div class="rpk-lbl">Employment Rate</div></div></div>
+          <div class="rpk"><div class="rpk-icon bg-red"><i class="bi bi-building"></i></div><div class="rpk-body"><div class="rpk-val" id="rk-ind">0</div><div class="rpk-lbl">Industries</div></div></div>
+          <div class="rpk"><div class="rpk-icon bg-dark"><i class="bi bi-calendar-check-fill"></i></div><div class="rpk-body"><div class="rpk-val" id="rk-ev">0</div><div class="rpk-lbl">Events</div></div></div>
+        </div>
+
+        <!-- CHART GRID — STATIC SIZED -->
+        <div class="rpt-charts">
+          <div class="panel rpt-chart-card">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-bar-chart-fill"></i> Employment Rate per Batch</span></div>
+            <div class="rpt-chart-inner"><canvas id="r-batch"></canvas></div>
+          </div>
+          <div class="panel rpt-chart-card">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-pie-chart-fill"></i> Industry Distribution</span></div>
+            <div class="rpt-chart-inner"><canvas id="r-ind"></canvas></div>
+          </div>
+          <div class="panel rpt-chart-card">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-people-fill"></i> Alumni per Batch</span></div>
+            <div class="rpt-chart-inner"><canvas id="r-dist"></canvas></div>
+          </div>
+          <div class="panel rpt-chart-card">
+            <div class="panel-hd"><span class="ptitle"><i class="bi bi-calendar-check"></i> Event Participation</span></div>
+            <div class="rpt-chart-inner"><canvas id="r-rsvp"></canvas></div>
+          </div>
+        </div>
+
+        <!-- EMPLOYED TABLE -->
+        <div class="panel mt-4">
+          <div class="panel-hd"><span class="ptitle"><i class="bi bi-table"></i> Employed Alumni List</span></div>
+          <div class="tw"><table class="at-tbl"><thead><tr><th>Name</th><th>Batch</th><th>Course</th><th>Company</th><th>Position</th><th>Industry</th></tr></thead><tbody id="r-emp-tb"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ===== PROFILE ===== -->
+      <div class="page d-none" id="pg-profile">
+        <div class="ph">
+          <div><h1 class="pt">My Profile</h1><p class="ps">Manage your personal and career information</p></div>
+          <button class="btn-red" onclick="saveProfile()"><i class="bi bi-check-lg"></i> Save Changes</button>
+        </div>
+        <div class="prof-layout">
+          <div class="panel prof-aside">
+            <div class="pa-photo">
+              <div class="pa-pic" id="pa-pic">A</div>
+              <label class="pa-cam" for="pa-file"><i class="bi bi-camera-fill"></i><input type="file" id="pa-file" accept="image/*" class="d-none" onchange="uploadPic(event)"/></label>
+            </div>
+            <div class="pa-name" id="pa-name">Alumni Name</div>
+            <div class="pa-role-tag" id="pa-role">Alumni</div>
+            <div class="pa-info">
+              <div class="pai"><i class="bi bi-mortarboard-fill"></i><span id="pai-batch">Batch —</span></div>
+              <div class="pai"><i class="bi bi-book-fill"></i><span id="pai-course">Course —</span></div>
+              <div class="pai"><i class="bi bi-briefcase-fill"></i><span id="pai-status">Status —</span></div>
+              <div class="pai"><i class="bi bi-building"></i><span id="pai-company">Company —</span></div>
+            </div>
+          </div>
+          <div class="prof-forms">
+            <div class="panel mb-3">
+              <div class="fsec-title">Personal Information</div>
+              <div class="row g-3">
+                <div class="col-md-6"><label class="fl">First Name</label><input type="text" class="fi" id="pf-fn"/></div>
+                <div class="col-md-6"><label class="fl">Last Name</label><input type="text" class="fi" id="pf-ln"/></div>
+                <div class="col-md-6"><label class="fl">Batch Year</label><select class="fi" id="pf-bt"><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option></select></div>
+                <div class="col-md-6"><label class="fl">Course</label><select class="fi" id="pf-cs"><option>BSIT</option><option>BSCS</option><option>BSN</option><option>BSBA</option><option>BSEd</option><option>BSCE</option></select></div>
+              </div>
+            </div>
+            <div class="panel mb-3">
+              <div class="fsec-title">Contact Information</div>
+              <div class="row g-3">
+                <div class="col-md-6"><label class="fl">Email</label><input type="email" class="fi" id="pf-em"/></div>
+                <div class="col-md-6"><label class="fl">Phone</label><input type="text" class="fi" id="pf-ph" placeholder="+63 9XX XXX XXXX"/></div>
+                <div class="col-12"><label class="fl">Address</label><input type="text" class="fi" id="pf-ad" placeholder="City, Province"/></div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="fsec-title">Career Information</div>
+              <div class="row g-3">
+                <div class="col-md-6"><label class="fl">Employment Status</label><select class="fi" id="pf-es"><option>Employed</option><option>Unemployed</option><option>Studying</option></select></div>
+                <div class="col-md-6"><label class="fl">Company / Institution</label><input type="text" class="fi" id="pf-co"/></div>
+                <div class="col-md-6"><label class="fl">Job Title</label><input type="text" class="fi" id="pf-jt"/></div>
+                <div class="col-md-6"><label class="fl">Industry</label><select class="fi" id="pf-in"><option value="">— Select —</option><option>Technology</option><option>Healthcare</option><option>Education</option><option>Finance</option><option>Government</option><option>BPO</option><option>Other</option></select></div>
+                <div class="col-md-6"><label class="fl">Years of Experience</label><input type="number" class="fi" id="pf-ye" min="0" placeholder="0"/></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-cont -->
+  </main>
+</div><!-- /app -->
+
+<!-- MODALS -->
+<div class="modal fade" id="m-addAlumni" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content at-modal"><div class="modal-header"><h5><i class="bi bi-person-plus-fill me-2 text-danger"></i>Add New Alumni</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-6"><label class="fl">First Name *</label><input type="text" class="fi" id="ma-fn"/></div><div class="col-md-6"><label class="fl">Last Name *</label><input type="text" class="fi" id="ma-ln"/></div><div class="col-md-6"><label class="fl">Batch Year</label><select class="fi" id="ma-bt"><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option></select></div><div class="col-md-6"><label class="fl">Course</label><select class="fi" id="ma-cs"><option>BSIT</option><option>BSCS</option><option>BSN</option><option>BSBA</option><option>BSEd</option><option>BSCE</option></select></div><div class="col-md-6"><label class="fl">Email</label><input type="email" class="fi" id="ma-em"/></div><div class="col-md-6"><label class="fl">Phone</label><input type="text" class="fi" id="ma-ph"/></div><div class="col-md-6"><label class="fl">Employment Status</label><select class="fi" id="ma-es"><option>Employed</option><option>Unemployed</option><option>Studying</option></select></div><div class="col-md-6"><label class="fl">Company</label><input type="text" class="fi" id="ma-co"/></div><div class="col-md-6"><label class="fl">Job Title</label><input type="text" class="fi" id="ma-jt"/></div><div class="col-md-6"><label class="fl">Industry</label><select class="fi" id="ma-in"><option value="">— Select —</option><option>Technology</option><option>Healthcare</option><option>Education</option><option>Finance</option><option>Government</option><option>BPO</option><option>Other</option></select></div><div class="col-md-6"><label class="fl">Years of Experience</label><input type="number" class="fi" id="ma-ye" value="0" min="0"/></div><div class="col-md-6"><label class="fl">Address</label><input type="text" class="fi" id="ma-ad"/></div></div></div><div class="modal-footer"><button class="btn-mc" data-bs-dismiss="modal">Cancel</button><button class="btn-ms" onclick="submitAddAlumni()">Add Alumni</button></div></div></div></div>
+
+<div class="modal fade" id="m-alumniDetail" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content at-modal"><div class="modal-header"><h5><i class="bi bi-person-badge-fill me-2 text-danger"></i>Alumni Profile</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="detail-body"></div></div></div></div>
+
+<div class="modal fade" id="m-careerUpdate" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content at-modal"><div class="modal-header"><h5><i class="bi bi-briefcase-fill me-2 text-danger"></i>Update Career Info</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-12"><label class="fl">Employment Status</label><select class="fi" id="cu-es"><option>Employed</option><option>Unemployed</option><option>Studying</option></select></div><div class="col-12"><label class="fl">Company / Institution</label><input type="text" class="fi" id="cu-co"/></div><div class="col-12"><label class="fl">Job Title / Program</label><input type="text" class="fi" id="cu-jt"/></div><div class="col-md-6"><label class="fl">Industry</label><select class="fi" id="cu-in"><option value="">— Select —</option><option>Technology</option><option>Healthcare</option><option>Education</option><option>Finance</option><option>Government</option><option>BPO</option><option>Other</option></select></div><div class="col-md-6"><label class="fl">Years of Experience</label><input type="number" class="fi" id="cu-ye" min="0"/></div></div></div><div class="modal-footer"><button class="btn-mc" data-bs-dismiss="modal">Cancel</button><button class="btn-ms" onclick="submitCareer()">Save</button></div></div></div></div>
+
+<div class="modal fade" id="m-createEvent" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content at-modal"><div class="modal-header"><h5><i class="bi bi-calendar-plus-fill me-2 text-danger"></i>Create Event</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-12"><label class="fl">Event Title *</label><input type="text" class="fi" id="ce-ti"/></div><div class="col-12"><label class="fl">Description</label><textarea class="fi" id="ce-de" rows="3"></textarea></div><div class="col-md-6"><label class="fl">Date *</label><input type="date" class="fi" id="ce-dt"/></div><div class="col-md-6"><label class="fl">Time</label><input type="time" class="fi" id="ce-tm"/></div><div class="col-12"><label class="fl">Venue</label><input type="text" class="fi" id="ce-ve"/></div><div class="col-md-6"><label class="fl">Type</label><select class="fi" id="ce-ty"><option>Reunion</option><option>Seminar</option><option>Job Fair</option><option>Fundraiser</option><option>Others</option></select></div><div class="col-md-6"><label class="fl">Max Attendees</label><input type="number" class="fi" id="ce-mx" value="100"/></div></div></div><div class="modal-footer"><button class="btn-mc" data-bs-dismiss="modal">Cancel</button><button class="btn-ms" onclick="submitEvent()">Create Event</button></div></div></div></div>
+
+<div class="modal fade" id="m-addDonation" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content at-modal"><div class="modal-header"><h5><i class="bi bi-heart-fill me-2 text-danger"></i>Record Donation</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-12"><label class="fl">Donor Name *</label><input type="text" class="fi" id="ad-nm"/></div><div class="col-md-6"><label class="fl">Amount (₱) *</label><input type="number" class="fi" id="ad-am" placeholder="0"/></div><div class="col-md-6"><label class="fl">Date</label><input type="date" class="fi" id="ad-dt"/></div><div class="col-12"><label class="fl">Purpose</label><select class="fi" id="ad-pu"><option>Scholarship Fund</option><option>Infrastructure</option><option>Events</option><option>General Fund</option><option>Other</option></select></div><div class="col-12"><label class="fl">Notes</label><textarea class="fi" id="ad-no" rows="2"></textarea></div></div></div><div class="modal-footer"><button class="btn-mc" data-bs-dismiss="modal">Cancel</button><button class="btn-ms" onclick="submitDonation()">Record</button></div></div></div></div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+  <div id="toast" class="toast align-items-center text-white border-0"><div class="d-flex"><div class="toast-body" id="toast-msg">Done!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
