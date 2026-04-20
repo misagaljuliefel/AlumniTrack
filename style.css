@@ -424,20 +424,18 @@ textarea.fi { resize: vertical; }
 .fsel:focus { border-color: var(--red); }
 .res-meta   { font-size: 14px; color: var(--gray-5); margin-bottom: 14px; }
 .alumni-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 14px; align-items: start; }
-.alum-card  { background: white; border-radius: var(--r); box-shadow: var(--shadow); border: 1.5px solid transparent; cursor: pointer; transition: border-color .2s, box-shadow .2s; overflow: hidden; }
-.alum-card:hover { border-color: var(--red); box-shadow: var(--shadow-md); }
-.alum-card-open  { border-color: var(--red) !important; box-shadow: var(--shadow-md) !important; }
-.ac-top     { display: flex; gap: 11px; align-items: center; padding: 16px 18px; }
-.ac-av      { width: 46px; height: 46px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; flex-shrink: 0; overflow: hidden; font-family: var(--head); }
+.alum-card  { background: white; border-radius: var(--r); box-shadow: var(--shadow); border: 1.5px solid transparent; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .2s; overflow: hidden; display: flex; flex-direction: column; height: 230px; padding: 20px; }
+.alum-card:hover { border-color: var(--red); box-shadow: var(--shadow-md); transform: translateY(-4px); }
+.ac-top     { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.ac-av      { width: 56px; height: 56px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0; overflow: hidden; font-family: var(--head); background: var(--gray-3); }
 .ac-av img  { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.ac-name    { font-size: 15px; font-weight: 600; color: var(--black); }
-.ac-sub     { font-size: 12.5px; color: var(--gray-5); margin-top: 2px; }
-.ac-body    { max-height: 0; overflow: hidden; transition: max-height .3s ease; padding: 0 18px; }
-.alum-card-open .ac-body { max-height: 300px; padding: 0 18px 16px; }
-.ac-row     { font-size: 13.5px; color: var(--gray-7); display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
-.ac-row i   { color: var(--red); font-size: 13px; }
-.ac-status-row { margin-top: 9px; }
-.ac-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--gray-3); }
+.ac-name-wrap { min-width: 0; flex: 1; }
+.ac-name    { font-size: 16px; font-weight: 700; color: var(--black); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-sub     { font-size: 13px; color: var(--gray-5); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-body    { display: flex; flex-direction: column; flex-grow: 1; padding: 0; }
+.ac-row     { font-size: 13.5px; color: var(--gray-7); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-row i   { color: var(--red); font-size: 14px; flex-shrink: 0; }
+.ac-status-row { margin-top: auto; } /* Hugs the bottom of the card */
 .detail-hd  { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--gray-3); }
 .detail-av  { width: 68px; height: 68px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; flex-shrink: 0; font-family: var(--head); overflow: hidden; }
 .detail-name{ font-family: var(--head); font-size: 20px; font-weight: 700; }
@@ -576,3 +574,44 @@ textarea.fi { resize: vertical; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--gray-3); border-radius: 50px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+
+/* ── SCROLL INDICATOR ANIMATION ──────────────────────────────────── */
+.scroll-indicator {
+  position: fixed; 
+  bottom: 30px;
+  left: calc(50% + 125px); 
+  transform: translateX(-50%);
+  text-align: center;
+  opacity: 0.9;
+  z-index: 900;
+  pointer-events: none; 
+  transition: opacity 0.4s ease; 
+}
+
+.scroll-indicator.hidden {
+  opacity: 0;
+}
+
+.scroll-indicator i {
+  display: inline-block;
+  animation: bounce 2s infinite ease-in-out;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-8px); }
+  60% { transform: translateY(-4px); }
+}
+
+@media (max-width: 768px) {
+  .scroll-indicator { left: 50%; } 
+}
+
+/* Hover effect for the bell icon */
+#admin-bell-icon:hover {
+  color: var(--red) !important;
+}
+
+/* Hover effect for notification items */
+.notif-item:hover { background: var(--gray-1); }
