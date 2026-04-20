@@ -626,51 +626,77 @@ const ALUMNI_SPA = {
    ================================================================ */
 const ADMIN_DASH = {
 
-  async load() {
+async load() {
     const h     = new Date().getHours();
     const greet = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-    ge('admin-greet').textContent = `${greet}, ${CU.fn}!`;
+    ge('admin-greet').textContent = `${greet}, Admin!`;
 
     const now = new Date(); now.setHours(0,0,0,0);
 
-    const [alumniSnap, eventsSnap, donSnap] = await Promise.all([
+    // FETCH ALL DATA
+    const [alumniSnap, eventsSnap, donSnap, actSnap] = await Promise.all([
       getDocs(COL.alumni),
       getDocs(COL.events),
       getDocs(COL.donations),
+      getDocs(COL.activity)
     ]);
 
-    const alumni    = alumniSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-    const events    = eventsSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-    const donations = donSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+    const alumni     = alumniSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+    const events     = eventsSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+    const donations  = donSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+    const activities = actSnap.docs.map(d => d.data());
 
+    // FIX 1: Cache the alumni data in the system's memory so filtering is instant!
+    this._cachedAlumni = alumni;
+
+    // FIX 2: Force the HTML dropdown to reset back to "all" every time you visit the page
+    sv('emp-filter', 'all');
+
+    // CALCULATE KPIs
     const total = alumni.length;
     const emp   = alumni.filter(a => a.status === 'Employed').length;
-    const uev   = events.filter(e => !e.completed && new Date(e.date) >= now).length;
     const don   = donations.filter(d => d.status === 'Paid').reduce((s,d) => s + d.amount, 0);
 
+    // UPDATE DASHBOARD NUMBERS
     countUp('a-total',  total);
     ge('a-emprate').textContent = total ? Math.round(emp / total * 100) + '%' : '0%';
-    countUp('a-events', uev);
     ge('a-don').textContent = '₱' + don.toLocaleString();
 
-    await this._renderActivity();
+    // RENDER COMPONENTS
     this._renderUpcomingStrip(now, events);
-    this._renderPastEvents(now, events);
+    this._renderNotificationsAndApprovals(donations, activities);
+    this._renderActivityLogs(activities);
     this._drawEmpChart('all', alumni);
   },
 
-  async filterChart(filter) {
-    const snap   = await getDocs(COL.alumni);
-    const alumni = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  // Notice we removed the "async" keyword here. It no longer waits for the internet!
+  filterChart(filter) {
+    // Pull the data directly from our lightning-fast cache
+    const alumni = this._cachedAlumni || [];
     this._drawEmpChart(filter, alumni);
   },
 
-  _drawEmpChart(filter, alumni) {
+_drawEmpChart(filter, alumni) {
     const ctx = ge('ch-emp');
-    if (!ctx) return;
+    const emptyState = ge('emp-empty-state');
+    if (!ctx || !emptyState) return;
+
     if (CHARTS.emp) { CHARTS.emp.destroy(); CHARTS.emp = null; }
 
     const data  = filter === 'all' ? alumni : alumni.filter(a => a.batch === filter);
+
+    // EMPTY STATE LOGIC
+    if (data.length === 0) {
+      // Fix: Force hide the canvas using JS !important to override the CSS
+      ctx.style.setProperty('display', 'none', 'important');
+      emptyState.classList.remove('d-none');
+      return; 
+    }
+
+    // Fix: Force show the canvas again when there is data
+    ctx.style.setProperty('display', 'block', 'important');
+    emptyState.classList.add('d-none');
+
     const emp   = data.filter(a => a.status === 'Employed').length;
     const unemp = data.filter(a => a.status === 'Unemployed').length;
     const study = data.filter(a => a.status === 'Studying').length;
@@ -689,10 +715,95 @@ const ADMIN_DASH = {
     });
   },
 
-  async _renderActivity() {
-    const snap = await getDocs(COL.activity);
-    const acts = snap.docs
-      .map(d => d.data())
+  // HANDLES BOTH DASHBOARD LIST AND NOTIFICATION MODAL
+  _renderNotificationsAndApprovals(donations, activities) {
+    const pending = donations.filter(d => d.status === 'Pending');
+    const listEl  = ge('a-pending-approvals');
+    const modalEl = ge('notif-modal-list');
+    const bellBadge = ge('admin-bell-badge');
+
+    // 1. Find crucial informational alerts (e.g., Profile updates, Registrations)
+    // In Phase 3, we will add specific "Employment Status" logs here.
+    const crucialLogs = activities.filter(a => 
+      a.txt.includes('updated their profile') || 
+      a.txt.includes('registered') ||
+      a.txt.includes('career info')
+    ).sort((a,b) => (b.ts||0) - (a.ts||0)).slice(0, 5); 
+
+    // 2. Toggle Red Dot (Only if there are Actionable items)
+    if (bellBadge) {
+      if (pending.length > 0) bellBadge.classList.remove('d-none');
+      else bellBadge.classList.add('d-none');
+    }
+
+    // 3. Render Dashboard Card (Actionable Items ONLY)
+    if (listEl) {
+      if (pending.length === 0) {
+         listEl.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--gray-5); font-size: 13.5px;">
+           <i class="bi bi-check-circle" style="font-size: 24px; color: #2e7d32; display:block; margin-bottom:8px;"></i>
+           All caught up! No pending approvals.
+         </div>`;
+      } else {
+         listEl.innerHTML = pending.map(d => `
+          <div style="display: flex; justify-content: space-between; align-items: center; background: #fff8e1; border-left: 3px solid #f57c00; padding: 10px 12px; border-radius: 6px;">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 700; color: var(--black);">${d.name}</div>
+              <div style="font-size: 12px; color: var(--gray-7);">Pledged ₱${d.amount.toLocaleString()}</div>
+            </div>
+            <button class="btn-outline" style="font-size: 12px; padding: 4px 10px; border-color: #f57c00; color: #f57c00;" onclick="NAV.go('donations')">Review</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 4. Render Modal Content (Actionable + Informational)
+    if (modalEl) {
+      let modalHTML = '';
+
+      // Actionable Section
+      if (pending.length > 0) {
+        modalHTML += `<div style="padding: 12px 16px; background: var(--gray-1); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--gray-5); border-bottom: 1px solid var(--gray-3);">Action Required</div>`;
+        modalHTML += pending.map(d => `
+          <div style="padding: 16px; border-bottom: 1px solid var(--gray-3); display: flex; gap: 12px; align-items: center; transition: background 0.2s;" class="notif-item">
+            <div style="width: 40px; height: 40px; background: #fff8e1; color: #f57c00; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;"><i class="bi bi-cash-stack"></i></div>
+            <div style="flex: 1;">
+              <div style="font-size: 14px; font-weight: 600; color: var(--black);">${d.name} pledged ₱${d.amount.toLocaleString()}</div>
+              <div style="font-size: 12.5px; color: var(--gray-5);">${d.date} • ${d.purpose}</div>
+            </div>
+            <button class="btn-outline" style="font-size: 12px; padding: 5px 12px;" onclick="bootstrap.Modal.getInstance(document.getElementById('m-notifications')).hide(); NAV.go('donations');">View</button>
+          </div>
+        `).join('');
+      }
+
+      // Informational Section
+      if (crucialLogs.length > 0) {
+        modalHTML += `<div style="padding: 12px 16px; background: var(--gray-1); font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--gray-5); border-bottom: 1px solid var(--gray-3); border-top: ${pending.length > 0 ? 'none' : '1px solid var(--gray-3)'}">Recent Updates</div>`;
+        modalHTML += crucialLogs.map(a => `
+          <div style="padding: 16px; border-bottom: 1px solid var(--gray-3); display: flex; gap: 12px; align-items: center;">
+            <div style="width: 40px; height: 40px; background: #e8f2fd; color: #1565c0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;"><i class="bi bi-info-circle-fill"></i></div>
+            <div>
+              <div style="font-size: 14px; font-weight: 500; color: var(--black);">${a.txt}</div>
+              <div style="font-size: 12px; color: var(--gray-5);">${a.time}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Empty State
+      if (pending.length === 0 && crucialLogs.length === 0) {
+        modalHTML = `<div style="padding: 40px 20px; text-align: center; color: var(--gray-5);">
+          <i class="bi bi-bell-slash" style="font-size: 32px; color: var(--gray-3); margin-bottom: 10px; display: inline-block;"></i>
+          <p style="font-size: 14px;">No new notifications</p>
+        </div>`;
+      }
+
+      modalEl.innerHTML = modalHTML;
+    }
+  },
+
+  // THE GENERAL LOGS AT THE BOTTOM OF DASHBOARD
+  _renderActivityLogs(activities) {
+    const acts = activities
       .sort((a,b) => (b.ts||0) - (a.ts||0))
       .slice(0, 6);
 
@@ -712,23 +823,7 @@ const ADMIN_DASH = {
           </div>`;
         }).join('')
       : `<p style="color:var(--gray-5);font-size:14px;padding:8px 0">No upcoming events. <a onclick="NAV.go('events')" style="color:var(--red);font-weight:600;cursor:pointer">Create one →</a></p>`;
-  },
-
-  _renderPastEvents(now, events) {
-    const past = events.filter(e => e.completed || new Date(e.date) < now);
-    ge('a-past-events').innerHTML = past.length
-      ? past.map(e => {
-          const label = e.type === 'Others' && e.customType ? e.customType : e.type;
-          return `<tr>
-            <td><strong>${e.title}</strong></td>
-            <td><span class="stag" style="background:var(--red-pale);color:var(--red-dark)">${label}</span></td>
-            <td>${new Date(e.date).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}</td>
-            <td>${e.venue}</td>
-            <td>${(e.rsvps||[]).length}</td>
-          </tr>`;
-        }).join('')
-      : `<tr><td colspan="5" style="text-align:center;color:var(--gray-5);padding:20px">No past events yet.</td></tr>`;
-  },
+  }
 };
 
 
@@ -737,7 +832,7 @@ const ADMIN_DASH = {
    ================================================================ */
 const PROFILE = {
 
-  loadAdmin() {
+loadAdmin() {
     sv('pf-fn', CU.fn || '');
     sv('pf-ln', CU.ln || '');
     sv('pf-em', CU.email || '');
@@ -746,6 +841,13 @@ const PROFILE = {
     const ph = ge('prof-photo');
     if (ph && !CU.av) ph.textContent = CU.fn[0];
     if (ph && CU.av)  ph.innerHTML = `<img src="${CU.av}"/>`;
+
+    // FIX: Force the Topbar and Sidebar to use the uploaded image!
+    if (CU.av) {
+      const tb = ge('tb-av'), sb = ge('sb-av');
+      if (tb) tb.innerHTML = `<img src="${CU.av}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+      if (sb) sb.innerHTML = `<img src="${CU.av}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    }
   },
 
   async save() {
@@ -800,6 +902,9 @@ const PROFILE = {
     const ph = ge('alm-prof-photo');
     if (ph && !CU.av) ph.textContent = CU.fn[0];
     if (ph && CU.av)  ph.innerHTML = `<img src="${CU.av}"/>`;
+    
+    // Ensure labels match their current status!
+    if (window.ALUMNI) ALUMNI.toggleStudyLabels(CU.status, 'apf');
   },
 
   async saveAlumni() {
@@ -894,64 +999,80 @@ const ALUMNI = {
       await this.render();
     }
   },
-
+  
   async render(list) {
     ge('alumni-dir-view').style.display    = '';
     ge('alumni-career-view').style.display = 'none';
     ge('btn-career-tab').style.display     = '';
     ge('btn-dir-tab').style.display        = 'none';
 
-    let data = list;
-    if (!data) {
-      const snap = await getDocs(COL.alumni);
-      data = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-    }
+    try {
+      let data = list;
+      if (!data) {
+        const snap = await getDocs(COL.alumni);
+        data = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        this._cachedAlumni = data; 
+        
+        // BUG FIX: Reset the filter dropdowns back to "All" when refreshing the page!
+        const fStatus = ge('dir-filter-status');
+        const fCourse = ge('dir-filter-course');
+        const fSearch = ge('dir-search');
+        if (fStatus) fStatus.selectedIndex = 0;
+        if (fCourse) fCourse.selectedIndex = 0;
+        if (fSearch) fSearch.value = '';
+      }
 
-    // Store total count for filter meta
-    if (!list) this._cachedTotal = data.length;
-    ge('dir-meta').textContent = `Showing ${data.length} of ${this._cachedTotal || data.length} alumni`;
-    ge('alumni-grid').innerHTML = data.map(a => this._cardHTML(a)).join('');
+      if (!list) this._cachedTotal = data.length;
+      ge('dir-meta').textContent = `Showing ${data.length} of ${this._cachedTotal || data.length} alumni`;
+      ge('alumni-grid').innerHTML = data.map(a => this._cardHTML(a)).join('');
+    } catch (e) {
+      console.error(e);
+      TOAST.err('Error loading directory. (Did you hit the Firebase Quota limit?)');
+    }
   },
 
+  
   _cardHTML(a) {
-    const courseLabel = COURSES.find(c => c.val === a.course)?.label || a.course;
-    const colorSeed   = a.id ? a.id.charCodeAt(0) : 0;
+    const imgUrl = a.av || `https://i.pravatar.cc/150?u=${a.id || a.fn}`;
+    
+    // SMART LOGIC: Change icons and hover text depending on status!
+    const icon1  = a.status === 'Studying' ? 'bi-book-half' : (a.status === 'Unemployed' ? 'bi-search' : 'bi-briefcase');
+    const title1 = a.status === 'Studying' ? 'Degree Program' : (a.status === 'Unemployed' ? 'Target Role' : 'Current Job');
+    const title2 = a.status === 'Studying' ? 'Institution' : (a.status === 'Unemployed' ? 'Previous Company' : 'Company');
+    
     return `
-      <div class="alum-card" onclick="ALUMNI.toggleCard(event, this, '${a.id}')">
+      <div class="alum-card" onclick="ALUMNI.openDetail('${a.id}')">
         <div class="ac-top">
-          <div class="ac-av" style="background:${avColor(colorSeed)}">${(a.fn||'?')[0]}${(a.ln||'?')[0]}</div>
-          <div><div class="ac-name">${a.fn} ${a.ln}</div><div class="ac-sub">Batch ${a.batch} · ${a.course}</div></div>
+          <div class="ac-av"><img src="${imgUrl}" alt="Profile" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=${a.fn}+${a.ln}&background=random'"></div>
+          <div class="ac-name-wrap">
+            <div class="ac-name" title="${a.fn} ${a.ln}">${a.fn} ${a.ln}</div>
+            <div class="ac-sub" title="Batch ${a.batch} · ${a.course}">Batch ${a.batch} · ${a.course}</div>
+          </div>
         </div>
         <div class="ac-body">
-          <div class="ac-row"><i class="bi bi-briefcase"></i>${a.jt || '—'}</div>
-          <div class="ac-row"><i class="bi bi-building"></i>${a.co || '—'}</div>
-          <div class="ac-row"><i class="bi bi-tag"></i>${a.ind || '—'}</div>
+          <div class="ac-row" title="${title1}: ${a.jt || '—'}"><i class="bi ${icon1}"></i> <span>${a.jt || '—'}</span></div>
+          <div class="ac-row" title="${title2}: ${a.co || '—'}"><i class="bi bi-building"></i> <span>${a.co || '—'}</span></div>
           <div class="ac-status-row"><span class="stag ${stClass(a.status)}">${a.status}</span></div>
-          <div class="ac-actions" onclick="event.stopPropagation()">
-            <button class="tbl-btn tbl-btn-edit"   onclick="ALUMNI.openEditModal('${a.id}')"><i class="bi bi-pencil-fill"></i> Edit</button>
-            <button class="tbl-btn tbl-btn-delete" onclick="ALUMNI.confirmDelete('${a.id}')"><i class="bi bi-trash-fill"></i></button>
-          </div>
-          <button class="btn-outline mt-3" style="width:100%;justify-content:center;font-size:13px;padding:7px" onclick="event.stopPropagation();ALUMNI.openDetail('${a.id}')">
-            <i class="bi bi-person-badge-fill"></i> View Full Profile
-          </button>
         </div>
       </div>`;
   },
 
+  // ---> And I accidentally made you delete this! Restored! <---
   toggleCard(e, card, id) {
     if (e.target.closest('.ac-actions') || e.target.closest('button')) return;
     card.classList.toggle('alum-card-open');
   },
 
-  async filter() {
+  // ---> Our new lightning-fast filter <---
+  filter() {
     const q      = gv('dir-q').toLowerCase().trim();
     const batch  = gv('f-batch');
     const course = gv('f-course');
     const status = gv('f-status');
     const ind    = gv('f-ind');
 
-    const snap = await getDocs(COL.alumni);
-    const all  = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    // Pull instantly from our local memory cache instead of Firebase
+    const all = this._cachedAlumni || [];
     this._cachedTotal = all.length;
 
     const result = all.filter(a => {
@@ -962,17 +1083,68 @@ const ALUMNI = {
           && (!status || a.status === status)
           && (!ind    || a.ind    === ind);
     });
-    await this.render(result);
+    
+    this.render(result); 
+  },
+
+  // NEW: The Magic Label Flipper!
+  toggleStudyLabels(status, prefix) {
+    const lblCo = ge(`lbl-${prefix}-co`);
+    const lblJt = ge(`lbl-${prefix}-jt`);
+    const lblIn = ge(`lbl-${prefix}-in`);
+    const inputCo = ge(`${prefix}-co`);
+    const inputJt = ge(`${prefix}-jt`);
+    const wrapIn  = ge(`wrap-${prefix}-in`);
+    const wrapYe  = ge(`wrap-${prefix}-ye`);
+    const wrapOther = ge(`${prefix}-in-other-wrap`);
+    
+    if (!lblCo || !lblJt) return;
+    
+    // Always show Industry and Experience by default before checking status
+    if (wrapIn) wrapIn.style.display = '';
+    if (wrapYe) wrapYe.style.display = '';
+    
+    if (status === 'Studying') {
+      lblCo.innerHTML = 'University / School';
+      lblJt.innerHTML = 'Degree Program';
+      if (inputCo) inputCo.placeholder = 'e.g. UP Diliman';
+      if (inputJt) inputJt.placeholder = 'e.g. Master of Science in IT';
+      
+      // Magically hide Industry and Experience fields for students!
+      if (wrapIn) wrapIn.style.display = 'none';
+      if (wrapYe) wrapYe.style.display = 'none';
+      if (wrapOther) wrapOther.style.display = 'none';
+      
+    } else if (status === 'Unemployed') {
+      lblCo.innerHTML = 'Previous Company <span style="font-size:11px; font-weight:400; color:var(--gray-5);">(Optional)</span>';
+      lblJt.innerHTML = 'Target Role';
+      if (lblIn) lblIn.innerHTML = 'Target Industry';
+      if (inputCo) inputCo.placeholder = 'Where did you last work?';
+      if (inputJt) inputJt.placeholder = 'e.g. Seeking Developer role...';
+      
+    } else {
+      lblCo.innerHTML = prefix === 'am' ? 'Company' : 'Company / Institution';
+      lblJt.innerHTML = prefix === 'am' ? 'Current Job' : 'Job Title';
+      if (lblIn) lblIn.innerHTML = 'Industry';
+      if (inputCo) inputCo.placeholder = 'Where do you work?';
+      if (inputJt) inputJt.placeholder = prefix === 'am' ? 'e.g. Software Engineer' : '';
+    }
   },
 
   openAddModal() {
     sv('m-alumni-id', '');
     ge('m-alumni-title').innerHTML = '<i class="bi bi-person-plus-fill text-danger me-2"></i>Add Alumni';
     ge('m-alumni-save').textContent = 'Save Alumni';
-    ['am-fn','am-ln','am-em','am-ph','am-ad','am-co','am-jt'].forEach(id => sv(id, ''));
-    sv('am-bt', ''); sv('am-cs', ''); sv('am-es', ''); sv('am-in', ''); sv('am-ye', 0);
-    const firstTab = ge('alumni-modal-tabs')?.querySelector('.nav-link');
-    if (firstTab) bootstrap.Tab.getOrCreateInstance(firstTab).show();
+    
+    ['am-fn','am-ln','am-em','am-ph','am-ad','am-co','am-jt','am-dob'].forEach(id => sv(id, ''));
+    sv('am-bt', ''); sv('am-cs', ''); sv('am-es', ''); sv('am-in', ''); 
+    sv('am-gen', ''); sv('am-civ', ''); sv('am-loc', 'Local (Philippines)'); sv('am-fs', 'None');
+    sv('am-ye', 0);
+    
+    ge('am-file').value = '';
+    ge('am-av-preview').innerHTML = '<i class="bi bi-person-fill"></i>';
+
+    this.toggleStudyLabels('', 'am'); // Reset labels
     bootstrap.Modal.getOrCreateInstance(ge('m-alumni')).show();
   },
 
@@ -981,18 +1153,29 @@ const ALUMNI = {
       const snap = await getDoc(doc(db, 'alumni', docId));
       if (!snap.exists()) return;
       const a = snap.data();
+      
       sv('m-alumni-id', docId);
       ge('m-alumni-title').innerHTML = '<i class="bi bi-pencil-fill text-danger me-2"></i>Edit Alumni';
       ge('m-alumni-save').textContent = 'Update Alumni';
+      
       sv('am-fn', a.fn);  sv('am-ln', a.ln);
       sv('am-em', a.email); sv('am-ph', a.phone || '');
-      sv('am-ad', a.addr  || '');
+      sv('am-ad', a.addr  || ''); sv('am-dob', a.dob || '');
       sv('am-bt', a.batch); sv('am-cs', a.course);
       sv('am-es', a.status); sv('am-co', a.co || '');
       sv('am-jt', a.jt  || ''); sv('am-in', a.ind || '');
+      sv('am-gen', a.gender || ''); sv('am-civ', a.civilStatus || '');
+      sv('am-loc', a.location || 'Local (Philippines)'); sv('am-fs', a.furtherStudies || 'None');
       sv('am-ye', a.yoe || 0);
-      const firstTab = ge('alumni-modal-tabs')?.querySelector('.nav-link');
-      if (firstTab) bootstrap.Tab.getOrCreateInstance(firstTab).show();
+
+      ge('am-file').value = '';
+      if (a.av) {
+        ge('am-av-preview').innerHTML = `<img src="${a.av}" style="width:100%;height:100%;object-fit:cover;"/>`;
+      } else {
+        ge('am-av-preview').innerHTML = '<i class="bi bi-person-fill"></i>';
+      }
+
+      this.toggleStudyLabels(a.status, 'am'); // Set labels based on current status
       bootstrap.Modal.getOrCreateInstance(ge('m-alumni')).show();
     } catch(e) {
       console.error(e);
@@ -1000,87 +1183,152 @@ const ALUMNI = {
     }
   },
 
+  previewImage(e) {
+    const file = e.target.files[0];
+    if (!file) { ge('am-av-preview').innerHTML = '<i class="bi bi-person-fill"></i>'; return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      ge('am-av-preview').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;"/>`;
+    };
+    reader.readAsDataURL(file);
+  },
+
   async submitSave() {
-    const fn     = gv('am-fn').trim();
-    const ln     = gv('am-ln').trim();
-    const email  = gv('am-em').trim().toLowerCase();
-    const phone  = gv('am-ph').trim();
-    const addr   = gv('am-ad').trim();
-    const batch  = gv('am-bt');
-    const course = gv('am-cs');
-    const status = gv('am-es');
-    const co     = gv('am-co').trim();
-    const jt     = gv('am-jt').trim();
-    const ind    = gv('am-in');
-    const yoe    = parseInt(gv('am-ye')) || 0;
+    const fn = gv('am-fn').trim(); const ln = gv('am-ln').trim();
+    const email = gv('am-em').trim().toLowerCase(); const phone = gv('am-ph').trim();
+    const addr = gv('am-ad').trim(); const dob = gv('am-dob'); 
+    const batch = gv('am-bt'); const course = gv('am-cs');
+    const status = gv('am-es'); const co = gv('am-co').trim();
+    const jt = gv('am-jt').trim();
+    const gender = gv('am-gen'); const civilStatus = gv('am-civ');
+    const location = gv('am-loc'); const furtherStudies = gv('am-fs');
+    const yoe = parseInt(gv('am-ye')) || 0;
     const editId = gv('m-alumni-id');
 
+    // NEW: Handle "Other" Industry box
+    let ind = gv('am-in');
+    if (ind === 'Other') ind = gv('am-in-other').trim();
+
+    // VALIDATIONS
     if (!fn || !ln)  { TOAST.err('First and last name are required.'); return; }
     if (!email)      { TOAST.err('Email is required.'); return; }
     if (!batch)      { TOAST.err('Please select a batch year.'); return; }
     if (!course)     { TOAST.err('Please select a course.'); return; }
     if (!status)     { TOAST.err('Please select employment status.'); return; }
-    if (!phone)      { TOAST.err('Phone number is required.'); return; }
+    if (ind === 'Other' && !gv('am-in-other').trim()) { TOAST.err('Please specify the industry.'); return; }
+    
+    // Validate Phone Number length (must be 10-15 digits if provided)
+    if (phone) {
+      const digits = phone.replace(/\D/g, '');
+      if (digits.length < 10 || digits.length > 15) { TOAST.err('Please enter a valid phone number.'); return; }
+    }
 
-    try {
-      if (editId) {
-        await updateDoc(doc(db, 'alumni', editId), { fn, ln, email, phone, addr, batch, course, status, co, jt, ind, yoe });
-        await addActivityLog(`Admin updated alumni: ${fn} ${ln}`);
-        TOAST.ok('Alumni updated!');
-      } else {
-        await addDoc(COL.alumni, { fn, ln, email, phone, addr, batch, course, status, co, jt, ind, yoe, av:null });
-        await addActivityLog(`New alumni added: ${fn} ${ln}`);
-        TOAST.ok('Alumni added!');
-      }
+    const fileEl = ge('am-file');
+    const file = fileEl?.files[0] || null;
+
+    const finalizeSave = async (avData) => {
+      // LAG KILLER: Hide modal instantly before doing database work!
       bootstrap.Modal.getInstance(ge('m-alumni'))?.hide();
-      await this.render();
-    } catch(e) {
-      console.error(e);
-      TOAST.err('Save failed. Check your connection.');
+      TOAST.ok(editId ? 'Updating alumni...' : 'Saving alumni...');
+
+      const dataPayload = { fn, ln, email, phone, addr, dob, batch, course, status, co, jt, ind, gender, civilStatus, location, furtherStudies, yoe };
+      if (avData !== undefined) dataPayload.av = avData;
+
+      try {
+        if (editId) {
+          await updateDoc(doc(db, 'alumni', editId), dataPayload);
+          const uSnap = await getDocs(query(COL.users, where('email','==',email)));
+          if (!uSnap.empty) { await updateDoc(uSnap.docs[0].ref, { fn, ln, email, batch, course, av: dataPayload.av || uSnap.docs[0].data().av }); }
+          await addActivityLog(`Admin updated alumni: ${fn} ${ln}`);
+          TOAST.ok('Alumni updated successfully!');
+        } else {
+          dataPayload.av = avData || null;
+          const alumRef = await addDoc(COL.alumni, dataPayload);
+          await addDoc(COL.users, { email, password: 'alumni123', role: 'alumni', fn, ln, batch, course, av: dataPayload.av, alumniDocId: alumRef.id });
+          await addActivityLog(`New alumni added: ${fn} ${ln}`);
+          TOAST.ok('Alumni added & account created!');
+        }
+        this._cachedAlumni = null; 
+        await this.render();
+      } catch(e) {
+        console.error(e);
+        TOAST.err('Save failed. Check your connection.');
+      }
+    };
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ev => finalizeSave(ev.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      await finalizeSave(undefined);
     }
   },
 
   async openDetail(docId) {
+    // ... (This is exactly the same Phase 3 code we just finished!) ...
     try {
       const snap = await getDoc(doc(db, 'alumni', docId));
       if (!snap.exists()) return;
       const a = snap.data();
       const courseLabel = COURSES.find(c => c.val === a.course)?.label || a.course;
-      const colorSeed   = docId.charCodeAt(0);
+      const imgUrl = a.av || `https://i.pravatar.cc/150?u=${docId || a.fn}`;
+
+      let ageText = '—';
+      if (a.dob) {
+        const bd = new Date(a.dob); const today = new Date();
+        let age = today.getFullYear() - bd.getFullYear();
+        const m = today.getMonth() - bd.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) { age--; }
+        ageText = `${age} yrs old`;
+      }
+      const locationText = a.location === 'Overseas' ? '<i class="bi bi-globe-americas text-primary me-1"></i> Overseas' : 'Local (Philippines)';
+
       ge('m-detail-body').innerHTML = `
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
-          <div class="ac-av" style="background:${avColor(colorSeed)};width:56px;height:56px;font-size:20px;flex-shrink:0">${(a.fn||'?')[0]}${(a.ln||'?')[0]}</div>
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;border-bottom:1px solid var(--gray-3);padding-bottom:20px;">
+          <div class="ac-av" style="width:76px;height:76px;flex-shrink:0;">
+             <img src="${imgUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=${a.fn}+${a.ln}&background=random'">
+          </div>
           <div>
-            <div style="font-size:18px;font-weight:700;font-family:var(--head)">${a.fn} ${a.ln}</div>
-            <div style="color:var(--gray-5);font-size:13px">Batch ${a.batch} · ${courseLabel}</div>
-            <span class="stag ${stClass(a.status)}" style="margin-top:4px;display:inline-block">${a.status}</span>
+            <div style="font-size:22px;font-weight:700;font-family:var(--head);line-height:1.2;">${a.fn} ${a.ln}</div>
+            <div style="color:var(--gray-5);font-size:14px;margin-top:4px;">Batch ${a.batch} · ${a.course}</div>
+            <span class="stag ${stClass(a.status)}" style="margin-top:8px;display:inline-block">${a.status}</span>
           </div>
         </div>
-        <div class="row g-3">
+        <div class="row g-4">
           <div class="col-md-6">
-            <div class="fsec" style="margin-bottom:10px">Contact</div>
-            <div style="font-size:14px;line-height:2"><i class="bi bi-envelope-fill me-2" style="color:var(--red)"></i>${a.email}</div>
-            <div style="font-size:14px;line-height:2"><i class="bi bi-telephone-fill me-2" style="color:var(--red)"></i>${a.phone || '—'}</div>
-            <div style="font-size:14px;line-height:2"><i class="bi bi-geo-alt-fill me-2" style="color:var(--red)"></i>${a.addr || '—'}</div>
+            <div class="fsec" style="color: var(--red); border-bottom-color: var(--red-pale); margin-bottom:12px;"><i class="bi bi-person-lines-fill me-2"></i>Personal Info</div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:90px;display:inline-block">Age:</strong> ${ageText}</div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:90px;display:inline-block">Gender:</strong> ${a.gender || '—'}</div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:90px;display:inline-block">Status:</strong> ${a.civilStatus || '—'}</div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:90px;display:inline-block">Location:</strong> ${locationText}</div>
+            <div class="fsec" style="color: var(--red); border-bottom-color: var(--red-pale); margin-bottom:12px; margin-top:20px;"><i class="bi bi-telephone-fill me-2"></i>Contact</div>
+            <div style="font-size:14px;line-height:2.2;word-break:break-all"><i class="bi bi-envelope-fill me-2" style="color:var(--gray-5)"></i>${a.email}</div>
+            <div style="font-size:14px;line-height:2.2"><i class="bi bi-phone-fill me-2" style="color:var(--gray-5)"></i>${a.phone || '—'}</div>
+            <div style="font-size:14px;line-height:2.2"><i class="bi bi-geo-alt-fill me-2" style="color:var(--gray-5)"></i>${a.addr || '—'}</div>
           </div>
           <div class="col-md-6">
-            <div class="fsec" style="margin-bottom:10px">Career</div>
-            <div style="font-size:14px;line-height:2"><i class="bi bi-briefcase-fill me-2" style="color:var(--red)"></i>${a.jt || '—'}</div>
-            <div style="font-size:14px;line-height:2"><i class="bi bi-building me-2" style="color:var(--red)"></i>${a.co || '—'}</div>
-            <div style="font-size:14px;line-height:2"><i class="bi bi-tag-fill me-2" style="color:var(--red)"></i>${a.ind || '—'}</div>
-            <div style="font-size:14px;line-height:2"><i class="bi bi-star-fill me-2" style="color:var(--red)"></i>${a.yoe} yr${a.yoe !== 1 ? 's' : ''} experience</div>
+            <div class="fsec" style="color: var(--red); border-bottom-color: var(--red-pale); margin-bottom:12px;"><i class="bi bi-mortarboard-fill me-2"></i>Education</div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:110px;display:inline-block">Degree:</strong> <span title="${courseLabel}">${a.course}</span></div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:110px;display:inline-block">Post-Grad:</strong> ${a.furtherStudies || 'None'}</div>
+            <div class="fsec" style="color: var(--red); border-bottom-color: var(--red-pale); margin-bottom:12px; margin-top:20px;">
+              ${a.status === 'Studying' ? '<i class="bi bi-book-half me-2"></i>Current Studies' : 
+               (a.status === 'Unemployed' ? '<i class="bi bi-search me-2"></i>Job Seeking' : '<i class="bi bi-briefcase-fill me-2"></i>Profession')}
+            </div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:110px;display:inline-block">${a.status === 'Studying' ? 'Institution:' : (a.status === 'Unemployed' ? 'Prev. Company:' : 'Company:')}</strong> ${a.co || '—'}</div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:110px;display:inline-block">${a.status === 'Studying' ? 'Program:' : (a.status === 'Unemployed' ? 'Target Role:' : 'Current Job:')}</strong> ${a.jt || '—'}</div>
+            ${a.status === 'Studying' ? '' : `
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:110px;display:inline-block">${a.status === 'Unemployed' ? 'Target Ind.:' : 'Industry:'}</strong> ${a.ind || '—'}</div>
+            <div style="font-size:14px;line-height:2.2"><strong style="color:var(--gray-7);width:110px;display:inline-block">Experience:</strong> ${a.yoe || 0} yr${a.yoe !== 1 ? 's' : ''}</div>
+            `}
           </div>
         </div>`;
 
-      const editBtn   = ge('detail-edit-btn');
-      const deleteBtn = ge('detail-delete-btn');
-      if (editBtn)   { editBtn.style.display   = ''; editBtn.onclick   = () => { bootstrap.Modal.getInstance(ge('m-alumni-detail'))?.hide(); ALUMNI.openEditModal(docId); }; }
+      const editBtn = ge('detail-edit-btn'); const deleteBtn = ge('detail-delete-btn');
+      if (editBtn) { editBtn.style.display = ''; editBtn.onclick = () => { bootstrap.Modal.getInstance(ge('m-alumni-detail'))?.hide(); ALUMNI.openEditModal(docId); }; }
       if (deleteBtn) { deleteBtn.style.display = ''; deleteBtn.onclick = () => { bootstrap.Modal.getInstance(ge('m-alumni-detail'))?.hide(); ALUMNI.confirmDelete(docId); }; }
       bootstrap.Modal.getOrCreateInstance(ge('m-alumni-detail')).show();
-    } catch(e) {
-      console.error(e);
-      TOAST.err('Could not load profile.');
-    }
+    } catch(e) { console.error(e); TOAST.err('Could not load profile.'); }
   },
 
   async confirmDelete(docId) {
@@ -1091,19 +1339,24 @@ const ALUMNI = {
       updateEl('del-title', `Delete ${a.fn} ${a.ln}?`);
       updateEl('del-msg',   'This will permanently remove this alumni record. This action cannot be undone.');
       _deletePending = async () => {
+        // LAG KILLER: Hide modal instantly
+        bootstrap.Modal.getInstance(ge('m-delete-confirm'))?.hide();
+        TOAST.ok('Deleting record...');
+
         await deleteDoc(doc(db, 'alumni', docId));
+        const uSnap = await getDocs(query(COL.users, where('email','==',a.email)));
+        if (!uSnap.empty) { await deleteDoc(uSnap.docs[0].ref); }
+        
         await addActivityLog(`Alumni deleted: ${a.fn} ${a.ln}`);
         TOAST.ok('Alumni deleted.');
-        bootstrap.Modal.getInstance(ge('m-delete-confirm'))?.hide();
+        this._cachedAlumni = null; 
         await ALUMNI.render();
       };
       bootstrap.Modal.getOrCreateInstance(ge('m-delete-confirm')).show();
-    } catch(e) {
-      console.error(e);
-      TOAST.err('Could not load data for deletion.');
-    }
+    } catch(e) { console.error(e); TOAST.err('Could not load data for deletion.'); }
   },
 
+  // PHASE 4: THE UPDATED CAREER TRACKING RENDER
   async _renderCareerTracking() {
     const snap   = await getDocs(COL.alumni);
     const alumni = snap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -1117,17 +1370,20 @@ const ALUMNI = {
     updateEl('ct-study', study);
     updateEl('ct-rate',  total ? Math.round(emp / total * 100) + '%' : '0%');
 
-    ge('ct-tbody').innerHTML = alumni.map(a => `
+    ge('ct-tbody').innerHTML = alumni.map(a => {
+      return `
       <tr>
-        <td>${a.fn} ${a.ln}</td>
-        <td>${a.batch}</td>
-        <td>${a.course}</td>
+        <td style="font-weight:600; color:var(--black);">${a.fn} ${a.ln}</td>
+        <td>${a.batch || '—'}</td>
+        <td>${a.course || '—'}</td>
+        <td>${a.furtherStudies || 'None'}</td>
         <td><span class="stag ${stClass(a.status)}">${a.status}</span></td>
         <td>${a.co  || '—'}</td>
-        <td>${a.jt  || '—'}</td>
+        <td style="font-weight:500;">${a.jt  || '—'}</td>
         <td>${a.ind || '—'}</td>
-        <td>${a.yoe}</td>
-      </tr>`).join('');
+        <td>${a.yoe || 0}</td>
+      </tr>`;
+    }).join('');
   },
 };
 
@@ -1514,33 +1770,39 @@ const DONATIONS = {
     const name    = gv('dn-name').trim();
     const amount  = parseFloat(gv('dn-amount'));
     const date    = gv('dn-date');
-    const purpose = gv('dn-purpose');
     const notes   = gv('dn-notes').trim();
     const editId  = gv('dn-id');
 
-    if (!name)               { TOAST.err('Donor name is required.');  return; }
+    // NEW: Handle "Other" Purpose
+    let purpose = gv('dn-purpose');
+    if (purpose === 'Other') purpose = gv('dn-purpose-other').trim();
+
+    if (!name)                { TOAST.err('Donor name is required.');  return; }
     if (!amount || amount<=0) { TOAST.err('Please enter a valid amount.'); return; }
-    if (!date)               { TOAST.err('Date is required.');        return; }
-    if (!purpose)            { TOAST.err('Please select a purpose.'); return; }
-    if (!notes)              { TOAST.err('Notes are required.');      return; }
+    if (!date)                { TOAST.err('Date is required.');        return; }
+    if (!purpose)             { TOAST.err('Please select or specify a purpose.'); return; }
+    if (!notes)               { TOAST.err('Notes are required.');      return; }
 
     const fileEl = ge('dn-file');
     const file   = fileEl?.files[0] || null;
 
     const saveWithFile = async (fileData, fileName) => {
+      // LAG KILLER: Hide modal instantly
+      bootstrap.Modal.getInstance(ge('m-donation'))?.hide();
+      TOAST.ok(editId ? 'Updating donation...' : 'Recording donation...');
+
       try {
         if (editId) {
           const upd = { name, amount, date, purpose, notes };
           if (fileData) { upd.file = fileData; upd.fileName = fileName; }
           await updateDoc(doc(db, 'donations', editId), upd);
           await addActivityLog(`Donation updated: ₱${amount.toLocaleString()} from ${name}`);
-          TOAST.ok('Donation updated!');
+          TOAST.ok('Donation updated successfully!');
         } else {
           await addDoc(COL.donations, { name, amount, date, purpose, notes, status:'Paid', file:fileData||null, fileName:fileName||'' });
           await addActivityLog(`Donation recorded: ₱${amount.toLocaleString()} from ${name}`);
-          TOAST.ok('Donation recorded!');
+          TOAST.ok('Donation recorded successfully!');
         }
-        bootstrap.Modal.getInstance(ge('m-donation'))?.hide();
         if (CU.role === 'admin') await this.load();
         else await ALUMNI_SPA._loadDonateHistory();
       } catch(e) {
@@ -1893,6 +2155,22 @@ window.TOAST       = TOAST;
 
 /* ── Wire up global delete confirm button ── */
 document.addEventListener('DOMContentLoaded', async () => {
+  
+  // --- SCROLL ARROW MAGIC ---
+  const contentArea = ge('content');
+  const scrollPrompt = ge('dash-scroll-prompt');
+  
+  if (contentArea && scrollPrompt) {
+    contentArea.addEventListener('scroll', () => {
+      // If the user scrolls down more than 40 pixels, hide the arrow
+      if (contentArea.scrollTop > 40) {
+        scrollPrompt.classList.add('hidden');
+      } else {
+        // If they scroll back to the top, show it again
+        scrollPrompt.classList.remove('hidden');
+      }
+    });
+  }
   const delBtn = ge('del-confirm-btn');
   if (delBtn) {
     delBtn.addEventListener('click', async () => {
