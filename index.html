@@ -189,13 +189,21 @@
   <main class="main">
 
     <!-- Admin topbar (hidden for alumni) -->
-    <div class="topbar admin-only" id="admin-topbar">
+     <div class="topbar admin-only" id="admin-topbar">
       <div class="tb-left">
         <button class="sb-toggle-btn" onclick="NAV.toggleSidebar()" title="Toggle Sidebar"><i class="bi bi-layout-sidebar-reverse"></i></button>
         <span class="tb-title" id="tb-title">Dashboard</span>
       </div>
       <div class="tb-right">
         <span class="tb-date" id="tb-date"></span>
+        
+        <div class="position-relative me-3 mt-1" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#m-notifications">
+          <i class="bi bi-bell-fill fs-5 text-secondary transition-all" id="admin-bell-icon"></i>
+          <span id="admin-bell-badge" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none">
+            <span class="visually-hidden">New alerts</span>
+          </span>
+        </div>
+
         <div class="tb-user-chip" onclick="NAV.go('profile')">
           <div class="tb-av" id="tb-av">A</div>
           <span id="tb-uname">User</span>
@@ -243,57 +251,88 @@
      ╚══════════════════════════════════════════════╝ -->
 <div class="page d-none" id="pg-admin-dash">
   <div class="ph">
-    <div><h1 class="pt" id="admin-greet">Good morning</h1>
+    <div><h1 class="pt" id="admin-greet">Good morning, Admin!</h1>
     <p class="ps">System overview — your alumni network, at a glance</p></div>
   </div>
-  <!-- KPI cards -->
-  <div class="kpi-row">
-    <div class="kc red"> <div class="kc-icon"><i class="bi bi-people-fill"></i></div>        <div class="kc-body"><div class="kc-val" id="a-total">0</div>   <div class="kc-lbl">Total Alumni</div></div></div>
-    <div class="kc dark"><div class="kc-icon"><i class="bi bi-briefcase-fill"></i></div>     <div class="kc-body"><div class="kc-val" id="a-emprate">0%</div> <div class="kc-lbl">Employment Rate</div></div></div>
-    <div class="kc white"><div class="kc-icon ri"><i class="bi bi-calendar-check-fill"></i></div><div class="kc-body"><div class="kc-val dt" id="a-events">0</div><div class="kc-lbl gt">Upcoming Events</div></div></div>
-    <div class="kc white"><div class="kc-icon ri"><i class="bi bi-heart-fill"></i></div>     <div class="kc-body"><div class="kc-val dt" id="a-don">₱0</div>  <div class="kc-lbl gt">Total Donations</div></div></div>
-  </div>
-  <!-- Employment chart + Activity -->
-  <div class="two-col mt-3">
-    <div class="panel">
-      <div class="panel-hd">
-        <span class="ptitle"><i class="bi bi-pie-chart-fill"></i> Employment Overview</span>
-        <select class="mini-sel" id="emp-filter" onchange="ADMIN_DASH.filterChart(this.value)">
-          <option value="all">All Batches</option>
-          <script>for(let y=new Date().getFullYear();y>=2000;y--)document.write(`<option>${y}</option>`)</script>
-        </select>
-      </div>
-      <div class="chart-box"><canvas id="ch-emp"></canvas></div>
-    </div>
-    <div class="panel">
-      <div class="panel-hd"><span class="ptitle"><i class="bi bi-activity"></i> Recent Activity</span></div>
-      <div class="act-list" id="a-activity"></div>
-    </div>
-  </div>
-  <!-- Upcoming events -->
-  <div class="panel mt-3">
-    <div class="panel-hd">
-      <span class="ptitle"><i class="bi bi-calendar2-week-fill"></i> Upcoming Events</span>
-      <button class="lnk-btn" onclick="NAV.go('events')">View All →</button>
-    </div>
-    <div class="uev-grid" id="a-uev"></div>
-  </div>
-  <!-- Past events history table -->
-  <div class="panel mt-3">
-    <div class="panel-hd">
-      <span class="ptitle"><i class="bi bi-clock-history"></i> Event History</span>
-      <button class="lnk-btn" onclick="NAV.go('events')">Manage →</button>
-    </div>
-    <p class="ps mb-3">A record of all completed past events.</p>
-    <div class="tbl-wrap">
-      <table class="dt">
-        <thead><tr><th>Event</th><th>Type</th><th>Date</th><th>Venue</th><th>RSVPs</th></tr></thead>
-        <tbody id="a-past-events"></tbody>
-      </table>
-    </div>
-  </div>
-</div><!-- END ADMIN DASHBOARD -->
 
+  <div class="row g-3 mb-4">
+    <div class="col-lg-7">
+      <div class="panel h-100 d-flex flex-column justify-content-center align-items-center" style="background-color: var(--dark); color: white; min-height: 220px; border:none;">
+        <div class="mb-2" style="font-size: 2.5rem; color: var(--red);"><i class="bi bi-people-fill"></i></div>
+        <div style="opacity: 0.7; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Total Registered Alumni</div>
+        <div id="a-total" style="font-size: 4.5rem; font-weight: 800; font-family: var(--head); line-height: 1;">0</div>
+      </div>
+    </div>
+    <div class="col-lg-5 d-flex flex-column gap-3">
+      <div class="panel h-50 d-flex align-items-center justify-content-between">
+        <div>
+          <div style="font-size: 12.5px; font-weight: 600; text-transform: uppercase; color: var(--gray-5); margin-bottom: 2px;">Total Donations</div>
+          <div id="a-don" style="font-size: 2rem; font-weight: 700; font-family: var(--head); color: var(--black);">₱0</div>
+        </div>
+        <div style="width: 48px; height: 48px; background: #edf7ee; color: #2e7d32; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;"><i class="bi bi-heart-fill"></i></div>
+      </div>
+      <div class="panel h-50 d-flex align-items-center justify-content-between">
+        <div>
+          <div style="font-size: 12.5px; font-weight: 600; text-transform: uppercase; color: var(--gray-5); margin-bottom: 2px;">Employment Rate</div>
+          <div id="a-emprate" style="font-size: 2rem; font-weight: 700; font-family: var(--head); color: var(--black);">0%</div>
+        </div>
+        <div style="width: 48px; height: 48px; background: var(--red-pale); color: var(--red); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;"><i class="bi bi-briefcase-fill"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-7">
+      <div class="panel h-100">
+        <div class="panel-hd">
+          <span class="ptitle"><i class="bi bi-pie-chart-fill"></i> Employment Overview</span>
+          <select class="mini-sel" id="emp-filter" onchange="ADMIN_DASH.filterChart(this.value)">
+            <option value="all">All Batches</option>
+            <script>for(let y=new Date().getFullYear();y>=2000;y--)document.write(`<option>${y}</option>`)</script>
+          </select>
+        </div>
+        <div class="chart-box" id="chart-container">
+          <canvas id="ch-emp"></canvas>
+          <div id="emp-empty-state" class="d-none" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--gray-5);">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: var(--gray-3); margin-bottom: 10px;"></i>
+            <p style="font-size: 14px; font-weight: 500;">Nothing at the moment</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="panel h-100" style="border-top: 4px solid #f57c00;">
+        <div class="panel-hd"><span class="ptitle" style="color: #f57c00;"><i class="bi bi-exclamation-circle-fill"></i> Needs Action</span></div>
+        <p style="font-size: 13px; color: var(--gray-5); margin-bottom: 15px;">Pending donations waiting for verification.</p>
+        <div id="a-pending-approvals" style="display: flex; flex-direction: column; gap: 10px; max-height: 220px; overflow-y: auto;">
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="panel h-100">
+        <div class="panel-hd">
+          <span class="ptitle"><i class="bi bi-calendar2-week-fill"></i> Upcoming Events</span>
+          <button class="lnk-btn" onclick="NAV.go('events')">View Calendar →</button>
+        </div>
+        <div class="uev-grid" id="a-uev" style="grid-template-columns: 1fr;"></div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="panel h-100">
+        <div class="panel-hd"><span class="ptitle"><i class="bi bi-activity"></i> System Logs</span></div>
+        <div class="act-list" id="a-activity"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dash-scroll-prompt" class="scroll-indicator">
+    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--gray-5); text-shadow: 0 1px 3px white;">Scroll for more</span><br/>
+    <i class="bi bi-chevron-double-down text-danger fs-4" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));"></i>
+  </div>
+</div>
 
 <!-- ╔══════════════════════════════════════════════════════╗
      ║  PAGE: ALUMNI SPA                                    ║
@@ -336,6 +375,7 @@
         <!-- Main column (Profile / Events / Donate) -->
         <div class="col-lg-8">
 
+
           <!-- ── PROFILE SECTION ────────────────────────────────── -->
           <div id="spa-sec-profile" class="spa-section">
             <!-- Hero welcome strip -->
@@ -349,6 +389,7 @@
                 </div>
               </div>
             </div>
+
             <!-- Stat cards -->
             <div class="alm-stats mb-3">
               <div class="alm-sc red-border">   <div class="alm-sc-icon ri">    <i class="bi bi-briefcase-fill"></i></div>    <div><div class="alm-sc-lbl">Status</div>      <div class="alm-sc-val" id="alm-status">—</div></div></div>
@@ -356,6 +397,7 @@
               <div class="alm-sc green-border"> <div class="alm-sc-icon gi">    <i class="bi bi-person-workspace"></i></div>   <div><div class="alm-sc-lbl">Job Title</div>   <div class="alm-sc-val" id="alm-jt">—</div></div></div>
               <div class="alm-sc orange-border"><div class="alm-sc-icon oi">    <i class="bi bi-calendar-check-fill"></i></div><div><div class="alm-sc-lbl">Events Joined</div><div class="alm-sc-val" id="alm-evjoined">0</div></div></div>
             </div>
+
             <!-- Editable profile form -->
             <div class="panel">
               <div class="panel-hd">
@@ -368,10 +410,12 @@
                   <button class="btn-red" onclick="PROFILE.saveAlumni()"><i class="bi bi-check-lg"></i> Save</button>
                 </div>
               </div>
+
               <!-- Photo preview centre -->
               <div style="text-align:center;margin-bottom:18px">
                 <div class="prof-photo" id="alm-prof-photo" style="margin:0 auto">A</div>
               </div>
+
               <!-- Personal -->
               <div class="fsec" style="margin-bottom:14px">Personal Information</div>
               <div class="row g-3 mb-4">
@@ -393,33 +437,42 @@
                     <option value="TEP">Teacher Education Program (TEP)</option>
                   </select>
                 </div>
+                <div class="col-md-6"><label class="fl">Gender</label><select class="fi" id="apf-gender"><option value="">Select</option><option>Female</option><option>Male</option><option>Prefer not to say</option></select></div>
+                <div class="col-md-6"><label class="fl">Marital Status</label><select class="fi" id="apf-marital"><option value="">Select</option><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></select></div>
+                <div class="col-md-6"><label class="fl">Location</label><select class="fi" id="apf-loc"><option value="Local (Philippines)">Local (Philippines)</option><option value="Overseas">Overseas</option></select></div>
+                <div class="col-md-6"><label class="fl">Further Studies</label><select class="fi" id="apf-fs"><option value="None">None</option><option value="Master's Degree">Master's Degree</option><option value="Doctoral Degree">Doctoral Degree</option></select></div>
               </div>
-              <!-- Contact -->
               <div class="fsec" style="margin-bottom:14px">Contact Information</div>
               <div class="row g-3 mb-4">
                 <div class="col-md-6"><label class="fl">Email</label> <input type="email" class="fi" id="apf-em"/></div>
                 <div class="col-md-6"><label class="fl">Phone</label> <input type="text"  class="fi" id="apf-ph" placeholder="+63 9XX XXX XXXX"/></div>
                 <div class="col-12"><label class="fl">Address</label><input type="text"   class="fi" id="apf-ad" placeholder="City, Province"/></div>
               </div>
-              <!-- Career -->
               <div class="fsec" style="margin-bottom:14px">Career Information</div>
               <div class="row g-3">
                 <div class="col-md-6"><label class="fl">Employment Status</label>
-                  <select class="fi" id="apf-es"><option>Employed</option><option>Unemployed</option><option>Studying</option></select>
-                </div>
-                <div class="col-md-6"><label class="fl">Company / Institution</label><input type="text" class="fi" id="apf-co"/></div>
-                <div class="col-md-6"><label class="fl">Job Title</label><input type="text" class="fi" id="apf-jt"/></div>
-                <div class="col-md-6"><label class="fl">Industry</label>
-                  <select class="fi" id="apf-in">
-                    <option value="">— Select —</option>
-                    <option>Technology</option><option>Healthcare</option><option>Education</option>
-                    <option>Finance</option><option>Government</option><option>BPO</option><option>Other</option>
+                  <select class="fi" id="apf-es" onchange="ALUMNI.toggleStudyLabels(this.value, 'apf')">
+                    <option value="" disabled selected hidden>— Select —</option><option>Employed</option><option>Unemployed</option><option>Studying</option>
                   </select>
                 </div>
-                <div class="col-md-6"><label class="fl">Years of Experience</label><input type="number" class="fi" id="apf-ye" min="0" placeholder="0"/></div>
+                <div class="col-md-6" id="wrap-apf-ye"><label class="fl">Years of Experience</label><input type="number" class="fi" id="apf-ye" min="0" placeholder="0"/></div>
+                
+                <div class="col-md-12"><label class="fl" id="lbl-apf-co">Company / Institution</label><input type="text" class="fi" id="apf-co"/></div>
+                
+                <div class="col-md-6" id="wrap-apf-in"><label class="fl" id="lbl-apf-in">Industry</label>
+                  <select class="fi" id="apf-in" onchange="document.getElementById('apf-in-other-wrap').style.display = this.value === 'Other' ? '' : 'none'">
+                    <option value="" disabled selected hidden>— Select —</option>
+                    <option>Technology</option><option>Healthcare</option><option>Education</option>
+                    <option>Finance</option><option>Government</option><option>BPO</option><option value="Other">Other</option>
+                  </select>
+                </div>
+                <div class="col-md-6"><label class="fl" id="lbl-apf-jt">Job Title</label><input type="text" class="fi" id="apf-jt"/></div>
+                <div class="col-md-12" id="apf-in-other-wrap" style="display:none"><label class="fl">Specify Industry</label><input type="text" class="fi" id="apf-in-other" placeholder="e.g. Real Estate..."/></div>
               </div>
             </div>
-          </div><!-- END PROFILE SECTION -->
+          </div>
+          
+          <!-- END PROFILE SECTION -->
 
           <!-- ── EVENTS SECTION ───────────────────────────────────
                Alumni can view all events and RSVP (no admin controls)
@@ -538,7 +591,24 @@
         <div class="kc white"><div class="kc-icon ri"><i class="bi bi-book-fill"></i></div><div class="kc-body"><div class="kc-val dt" id="ct-study">0</div><div class="kc-lbl gt">Studying</div></div></div>
         <div class="kc white"><div class="kc-icon ri"><i class="bi bi-percent"></i></div><div class="kc-body"><div class="kc-val dt" id="ct-rate">0%</div><div class="kc-lbl gt">Employment Rate</div></div></div>
       </div>
-      <div class="tbl-wrap"><table class="dt"><thead><tr><th>Name</th><th>Batch</th><th>Course</th><th>Status</th><th>Company</th><th>Job Title</th><th>Industry</th><th>Exp (yrs)</th></tr></thead><tbody id="ct-tbody"></tbody></table></div>
+      <div class="tbl-wrap">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Batch</th>
+              <th>Course</th>
+              <th>Post-Grad</th>
+              <th>Status</th>
+              <th>Company</th>
+              <th>Current Job</th>
+              <th>Industry</th>
+              <th>Exp. (Yrs)</th>
+            </tr>
+          </thead>
+          <tbody id="ct-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div><!-- END ALUMNI DIRECTORY -->
@@ -696,15 +766,83 @@
         <h5 class="modal-title" id="m-alumni-title"><i class="bi bi-person-plus-fill text-danger me-2"></i>Add Alumni</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body" style="padding: 24px 32px;">
         <input type="hidden" id="m-alumni-id"/>
-        <ul class="nav nav-tabs mb-3" id="alumni-modal-tabs">
-          <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-personal">Personal</a></li>
-          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-contact">Contact</a></li>
-          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-career">Career</a></li>
-        </ul>
-        <div class="tab-content">
-          <!-- Personal tab -->
+        
+        <div class="fsec" style="color: var(--red); border-bottom-color: var(--red-pale); margin-top: 0;"><i class="bi bi-person-lines-fill me-2"></i>Personal Information</div>
+        <div class="row g-3 mb-4">
+          
+          <div class="col-12">
+            <label class="fl">Profile Photo</label>
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <div id="am-av-preview" style="width: 50px; height: 50px; background: var(--gray-3); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 50%; overflow: hidden; flex-shrink: 0;"><i class="bi bi-person-fill"></i></div>
+              <input type="file" id="am-file" accept="image/*" class="fi" style="padding: 8px;" onchange="ALUMNI.previewImage(event)"/>
+            </div>
+          </div>
+
+          <div class="col-md-6"><label class="fl">First Name <span class="text-danger">*</span></label><input type="text" class="fi" id="am-fn"/></div>
+          <div class="col-md-6"><label class="fl">Last Name <span class="text-danger">*</span></label> <input type="text" class="fi" id="am-ln"/></div>
+          <div class="col-md-6"><label class="fl">Date of Birth</label><input type="date" class="fi" id="am-dob"/></div>
+          <div class="col-md-6"><label class="fl">Gender</label><select class="fi" id="am-gen"><option value="">Select</option><option>Female</option><option>Male</option><option>Prefer not to say</option></select></div>
+          <div class="col-md-6"><label class="fl">Civil Status</label><select class="fi" id="am-civ"><option value="">Select</option><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></select></div>
+          <div class="col-md-6"><label class="fl">Location</label><select class="fi" id="am-loc"><option value="Local (Philippines)">Local (Philippines)</option><option value="Overseas">Overseas</option></select></div>
+          <div class="col-md-6"><label class="fl">Email <span class="text-danger">*</span></label><input type="email" class="fi" id="am-em" placeholder="valid@email.com"/></div>
+          <div class="col-md-6"><label class="fl">Phone <span class="text-danger">*</span></label><input type="text"  class="fi" id="am-ph" placeholder="09XXXXXXXXX"/></div>
+          <div class="col-12"><label class="fl">Address</label><input type="text" class="fi" id="am-ad" placeholder="City, Province"/></div>
+        </div>
+
+        <div class="fsec" style="color: var(--red); border-bottom-color: var(--red-pale);"><i class="bi bi-mortarboard-fill me-2"></i>School Information</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-4"><label class="fl">Batch Year <span class="text-danger">*</span></label>
+            <select class="fi" id="am-bt">
+              <option value="">Select</option>
+              <script>for(let y=new Date().getFullYear();y>=2000;y--)document.write(`<option>${y}</option>`)</script>
+            </select>
+          </div>
+          <div class="col-md-8"><label class="fl">Course <span class="text-danger">*</span></label>
+            <select class="fi" id="am-cs">
+              <option value="">Select</option>
+              <option value="BACJ">Bachelor in Arts, Communication, and Journalism (BACJ)</option>
+              <option value="BSA">Bachelor of Science in Accountancy (BSA)</option>
+              <option value="BSBA">Bachelor of Science in Business Administration (BSBA)</option>
+              <option value="BSE">Bachelor of Science in Entrepreneurship (BSE)</option>
+              <option value="BSIT">Bachelor of Science in Information Technology (BSIT)</option>
+              <option value="BSP">Bachelor of Science in Psychology (BSP)</option>
+              <option value="TEP">Teacher Education Program (TEP)</option>
+            </select>
+          </div>
+          <div class="col-12"><label class="fl">Further Studies</label>
+            <select class="fi" id="am-fs"><option value="None">None</option><option value="Master's Degree">Master's Degree</option><option value="Doctoral Degree">Doctoral Degree</option></select>
+          </div>
+        </div>
+
+        <div class="fsec" style="color: var(--red); border-bottom-color: var(--red-pale);"><i class="bi bi-briefcase-fill me-2"></i>Career Information</div>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="fl">Employment Status <span class="text-danger">*</span></label>
+            <select class="fi" id="am-es" onchange="ALUMNI.toggleStudyLabels(this.value, 'am')"><option value="" disabled selected hidden>— Select —</option><option>Employed</option><option>Unemployed</option><option>Studying</option></select>
+          </div>
+          <div class="col-md-6" id="wrap-am-ye"><label class="fl">Years Exp.</label><input type="number" class="fi" id="am-ye" min="0" value="0"/></div>
+          
+          <div class="col-md-12"><label class="fl" id="lbl-am-co">Company</label><input type="text" class="fi" id="am-co" placeholder="Where do you work?"/></div>
+          
+          <div class="col-md-6" id="wrap-am-in"><label class="fl" id="lbl-am-in">Industry</label>
+            <select class="fi" id="am-in" onchange="document.getElementById('am-in-other-wrap').style.display = this.value === 'Other' ? '' : 'none'">
+              <option value="" disabled selected hidden>— Select —</option><option>Technology</option><option>Healthcare</option><option>Education</option><option>Finance</option><option>Government</option><option>BPO</option><option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="col-md-6"><label class="fl" id="lbl-am-jt">Current Job</label><input type="text" class="fi" id="am-jt" placeholder="e.g. Software Engineer"/></div>
+          <div class="col-md-12" id="am-in-other-wrap" style="display:none"><label class="fl">Specify Industry</label><input type="text" class="fi" id="am-in-other" placeholder="e.g. Media, Logistics, Real Estate..."/></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn-confirm" id="m-alumni-save" onclick="ALUMNI.submitSave()">Save Alumni</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+      <!-- Personal tab -->
           <div class="tab-pane fade show active" id="tab-personal">
             <div class="row g-3">
               <div class="col-md-6"><label class="fl">First Name <span class="text-danger">*</span></label><input type="text" class="fi" id="am-fn"/></div>
@@ -770,8 +908,7 @@
     <div class="modal-content at-modal">
       <div class="modal-header"><h5 class="modal-title"><i class="bi bi-person-badge-fill text-danger me-2"></i>Alumni Profile</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body" id="m-detail-body"></div>
-      <div class="modal-footer">
-        <button class="btn-cancel" data-bs-dismiss="modal">Close</button>
+      <div class="modal-footer" style="justify-content: flex-end; gap: 8px;">
         <button class="btn-outline-warn" id="detail-delete-btn" style="display:none"><i class="bi bi-trash-fill"></i> Delete</button>
         <button class="btn-confirm"      id="detail-edit-btn"   style="display:none"><i class="bi bi-pencil-fill"></i> Edit</button>
       </div>
@@ -822,8 +959,11 @@
           <div class="col-md-6"><label class="fl">Amount (₱) <span class="text-danger">*</span></label><input type="number" class="fi" id="dn-amount" min="1"/></div>
           <div class="col-md-6"><label class="fl">Date <span class="text-danger">*</span></label><input type="date" class="fi" id="dn-date"/></div>
           <div class="col-12"><label class="fl">Purpose <span class="text-danger">*</span></label>
-            <select class="fi" id="dn-purpose"><option value="">— Select —</option><option>Scholarship Fund</option><option>Infrastructure</option><option>Events</option><option>General Fund</option><option>Other</option></select>
+            <select class="fi" id="dn-purpose" onchange="document.getElementById('dn-purpose-other-wrap').style.display = this.value === 'Other' ? '' : 'none'">
+              <option value="" disabled selected hidden>— Select —</option><option>Scholarship Fund</option><option>Infrastructure</option><option>Events</option><option>General Fund</option><option value="Other">Other</option>
+            </select>
           </div>
+          <div class="col-12" id="dn-purpose-other-wrap" style="display:none"><label class="fl">Specify Purpose <span class="text-danger">*</span></label><input type="text" class="fi" id="dn-purpose-other" placeholder="e.g. Sports Equipment..."/></div>
           <div class="col-12"><label class="fl">Notes <span class="text-danger">*</span></label><textarea class="fi" id="dn-notes" rows="2" placeholder="Brief description or message…"></textarea></div>
           <div class="col-12">
             <label class="fl">Receipt / Proof <span style="font-size:11px;color:var(--gray-5);font-weight:400;text-transform:none">(optional)</span></label>
@@ -865,6 +1005,21 @@
     <div class="d-flex">
       <div class="toast-body" id="toast-msg">Done</div>
       <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications Modal -->
+ <div class="modal fade" id="m-notifications" tabindex="-1">
+  <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content at-modal">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-bell-fill text-danger me-2"></i>Notifications</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0"> <div id="notif-modal-list" style="max-height: 400px; overflow-x: hidden;">
+          </div>
+      </div>
     </div>
   </div>
 </div>
