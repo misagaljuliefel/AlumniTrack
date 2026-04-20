@@ -1008,12 +1008,12 @@ const ALUMNI = {
 
     try {
       let data = list;
+      // If list is empty (fresh load), fetch everything AND clear all filters!
       if (!data) {
         const snap = await getDocs(COL.alumni);
         data = snap.docs.map(d => ({ id:d.id, ...d.data() }));
         this._cachedAlumni = data; 
         
-        // BUG FIX: Reset the filter dropdowns back to "All" when refreshing the page!
         const fStatus = ge('dir-filter-status');
         const fCourse = ge('dir-filter-course');
         const fSearch = ge('dir-search');
@@ -1027,7 +1027,7 @@ const ALUMNI = {
       ge('alumni-grid').innerHTML = data.map(a => this._cardHTML(a)).join('');
     } catch (e) {
       console.error(e);
-      TOAST.err('Error loading directory. (Did you hit the Firebase Quota limit?)');
+      TOAST.err('Error loading directory.');
     }
   },
 
@@ -1248,8 +1248,16 @@ const ALUMNI = {
           await addActivityLog(`New alumni added: ${fn} ${ln}`);
           TOAST.ok('Alumni added & account created!');
         }
-        this._cachedAlumni = null; 
-        await this.render();
+        
+        // REFRESH DATA BUT KEEP EXACT FILTERS & TAB!
+        const snap = await getDocs(COL.alumni);
+        this._cachedAlumni = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        
+        if (ge('alumni-career-view').style.display === '') {
+          this._renderCareerTracking();
+        } else {
+          this.filter(); 
+        }
       } catch(e) {
         console.error(e);
         TOAST.err('Save failed. Check your connection.');
@@ -1349,8 +1357,16 @@ const ALUMNI = {
         
         await addActivityLog(`Alumni deleted: ${a.fn} ${a.ln}`);
         TOAST.ok('Alumni deleted.');
-        this._cachedAlumni = null; 
-        await ALUMNI.render();
+        
+        // REFRESH DATA BUT KEEP EXACT FILTERS & TAB!
+        const snap = await getDocs(COL.alumni);
+        this._cachedAlumni = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        
+        if (ge('alumni-career-view').style.display === '') {
+          this._renderCareerTracking();
+        } else {
+          this.filter(); 
+        }
       };
       bootstrap.Modal.getOrCreateInstance(ge('m-delete-confirm')).show();
     } catch(e) { console.error(e); TOAST.err('Could not load data for deletion.'); }
